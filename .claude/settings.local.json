@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm view:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(cmd.exe /c \"cd D:\\\\agentic-ai\\\\backend && npm uninstall better-sqlite3 && npm install @libsql/client\" 2>&1)",
+      "Bash(cmd.exe /c \"dir D:\\\\agentic-ai\\\\node_modules\\\\better-sqlite3 2>&1 && echo EXISTS || echo NOT_FOUND\")",
+      "Bash(cmd.exe /c \"dir D:\\\\agentic-ai\\\\node_modules\\\\@libsql\\\\client 2>&1 | find \\\\\"Directory\\\\\"\")",
+      "Bash(cmd.exe /c \"dir D:\\\\agentic-ai\\\\node_modules\\\\@libsql 2>&1\")",
+      "WebFetch(domain:generativelanguage.googleapis.com)",
+      "Bash(cmd.exe /c \"cd D:\\\\agentic-ai\\\\frontend && npx tsc --noEmit 2>&1\")",
+      "Bash(cmd.exe /c \"cd D:\\\\agentic-ai\\\\backend && npx tsc --noEmit 2>&1\")",
+      "Bash(cmd.exe /c \"findstr /r /s \\\\\"mastra\\\\|Mastra\\\\\" D:\\\\agentic-ai\\\\backend\\\\src\\\\*.ts D:\\\\agentic-ai\\\\backend\\\\src\\\\agents\\\\*.ts D:\\\\agentic-ai\\\\backend\\\\src\\\\workflows\\\\*.ts 2>&1\")",
+      "Bash(cmd.exe /c \"findstr /s /i \\\\\"@mastra\\\\\" D:\\\\agentic-ai\\\\backend\\\\src\\\\agents\\\\planner.ts D:\\\\agentic-ai\\\\backend\\\\src\\\\agents\\\\retriever.ts D:\\\\agentic-ai\\\\backend\\\\src\\\\index.ts 2>&1\")",
+      "Bash(cmd.exe /c \"type D:\\\\agentic-ai\\\\backend\\\\src\\\\agents\\\\planner.ts\")",
+      "Bash(cmd.exe /c \"type D:\\\\agentic-ai\\\\backend\\\\package.json\" 2>&1)",
+      "Bash(cmd.exe /c \"dir D:\\\\agentic-ai\\\\node_modules\\\\@mastra /b 2>&1\")",
+      "Bash(cmd.exe /c \"type D:\\\\agentic-ai\\\\node_modules\\\\@mastra\\\\core\\\\package.json\")",
+      "Bash(cmd.exe /c \"cd D:\\\\agentic-ai\\\\backend && npm install mastra 2>&1\")",
+      "Bash(cmd.exe /c \"cd D:\\\\agentic-ai\\\\backend && npm install @mastra/core@latest mastra --legacy-peer-deps 2>&1\")",
+      "Bash(cmd.exe /c \"cd D:\\\\agentic-ai\\\\backend && npm install @mastra/libsql --legacy-peer-deps 2>&1\")",
+      "Bash(cmd.exe /c \"node -e \\\\\"const m = require\\('D:/agentic-ai/node_modules/@mastra/libsql/dist/index.cjs'\\); console.log\\(Object.keys\\(m\\)\\)\\\\\" 2>&1\")",
+      "Bash(cmd.exe /c \"node -e \\\\\"const {LibSQLStore} = require\\('D:/agentic-ai/node_modules/@mastra/libsql/dist/index.cjs'\\); const s = new LibSQLStore\\({id:'mastra',url:'file:test.db'}\\); console.log\\('ok'\\)\\\\\" 2>&1\")"
+    ]
+  }
+}

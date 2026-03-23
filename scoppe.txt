@@ -1,0 +1,26 @@
+All proposed projects should demonstrate key characteristics of agentic AI systems:
+• Agent Orchestration: Multiple agents or components should coordinate tasks
+through structured workflows. The system should demonstrate interaction between
+planning agents, execution agents, and information retrieval components.
+• Planning and Reasoning: Thesystem must include a planning mechanism where
+an agent decomposes a complex goal into smaller tasks and executes them sequen
+tially.
+• Memory Integration: Agents should maintain contextual memory, such as con
+versation history, task state, or historical data. A vector database or structured
+memory store may be used.
+• Retrieval-Augmented Generation (RAG): At least one component should in
+corporate external knowledge retrieval (documents, APIs, logs, or databases) to
+improve reasoning and decision making.
+• Offline / Local Model Usage: At least one agent in the system should operate
+using an offline or locally hosted model to demonstrate hybrid AI architectures
+combining cloud and local intelligence.
+• Tool Usage: Agents should interact with tools such as APIs, databases, search
+engines, or data processing modules to complete tasks.
+1
+Agentic AI Project Ideas
+1. Academic Research Detective
+An autonomous agent that navigates citation networks to build deep understanding
+of research topics. The system reads a paper, identifies unfamiliar concepts, searches
+cited sources recursively, and reconstructs the conceptual lineage of ideas.
+Agentic Focus: Recursive search planning, literature retrieval, and context synthesis
+using RAG-based knowledge exploration
