@@ -22,7 +22,8 @@
       "Bash(cmd.exe /c \"cd D:\\\\agentic-ai\\\\backend && npm install @mastra/core@latest mastra --legacy-peer-deps 2>&1\")",
       "Bash(cmd.exe /c \"cd D:\\\\agentic-ai\\\\backend && npm install @mastra/libsql --legacy-peer-deps 2>&1\")",
       "Bash(cmd.exe /c \"node -e \\\\\"const m = require\\('D:/agentic-ai/node_modules/@mastra/libsql/dist/index.cjs'\\); console.log\\(Object.keys\\(m\\)\\)\\\\\" 2>&1\")",
-      "Bash(cmd.exe /c \"node -e \\\\\"const {LibSQLStore} = require\\('D:/agentic-ai/node_modules/@mastra/libsql/dist/index.cjs'\\); const s = new LibSQLStore\\({id:'mastra',url:'file:test.db'}\\); console.log\\('ok'\\)\\\\\" 2>&1\")"
+      "Bash(cmd.exe /c \"node -e \\\\\"const {LibSQLStore} = require\\('D:/agentic-ai/node_modules/@mastra/libsql/dist/index.cjs'\\); const s = new LibSQLStore\\({id:'mastra',url:'file:test.db'}\\); console.log\\('ok'\\)\\\\\" 2>&1\")",
+      "Bash(cmd.exe /c \"dir D:\\\\agentic-ai /b 2>&1\")"
     ]
   }
 }
