@@ -16,13 +16,19 @@ async function rateLimit(): Promise<void> {
   lastRequestTime = Date.now()
 }
 
-async function fetchWithRetry(url: string, headers: Record<string, string>, retries = 3): Promise<Response> {
+async function fetchWithRetry(
+  url: string,
+  headers: Record<string, string>,
+  retries = 3,
+  onWait?: (waitMs: number, attempt: number) => void
+): Promise<Response> {
   for (let attempt = 0; attempt < retries; attempt++) {
     await rateLimit()
     const res = await fetch(url, { headers })
     if (res.status === 429) {
       const wait = 2000 * (attempt + 1)
       console.warn(`Semantic Scholar rate limited, waiting ${wait}ms...`)
+      onWait?.(wait, attempt + 1)
       await new Promise(resolve => setTimeout(resolve, wait))
       continue
     }
@@ -57,10 +63,15 @@ function buildHeaders(apiKey: string): Record<string, string> {
   return headers
 }
 
-export async function searchPapers(query: string, apiKey: string, sessionId = ''): Promise<Paper[]> {
+export async function searchPapers(
+  query: string,
+  apiKey: string,
+  sessionId = '',
+  onWait?: (waitMs: number, attempt: number) => void
+): Promise<Paper[]> {
   try {
     const url = `${BASE_URL}/paper/search?query=${encodeURIComponent(query)}&fields=${REF_FIELDS}&limit=8`
-    const response = await fetchWithRetry(url, buildHeaders(apiKey))
+    const response = await fetchWithRetry(url, buildHeaders(apiKey), 3, onWait)
     if (!response.ok) {
       console.error(`Semantic Scholar search failed: ${response.status} for query: ${query}`)
       return []

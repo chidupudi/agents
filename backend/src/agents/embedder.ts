@@ -27,6 +27,27 @@ function chunkText(text: string, chunkSize = 500, overlap = 50): string[] {
   return chunks
 }
 
+export async function embedPdfContent(params: {
+  text: string
+  sessionId: string
+  paperId: string
+  ollamaUrl: string
+}): Promise<void> {
+  // Use larger chunks for full PDF content so context is richer
+  const chunks = chunkText(params.text, 800, 100)
+  for (let i = 0; i < chunks.length; i++) {
+    const embedding = await embedText(chunks[i], params.ollamaUrl)
+    storeChunk({
+      id: uuidv4(),
+      sessionId: params.sessionId,
+      paperId: params.paperId,
+      chunkIndex: i,
+      text: chunks[i],
+      embedding
+    })
+  }
+}
+
 export async function embedAndStorePaper(params: {
   paper: Paper
   sessionId: string

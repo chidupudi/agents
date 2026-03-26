@@ -11,9 +11,9 @@ import {
   updateSessionStatus
 } from '../db/sessions.js'
 import { runResearchWorkflow } from '../workflows/researchWorkflow.js'
-import { runTutor } from '../agents/tutor.js'
+import { runTutor, runChat } from '../agents/tutor.js'
 import { runReport } from '../agents/report.js'
-import { detectIntent } from '../agents/orchestrator.js'
+import { detectIntent, classifyInput } from '../agents/orchestrator.js'
 import { getModelInfo } from '../models/registry.js'
 import type { Session } from '../types.js'
 
@@ -32,6 +32,22 @@ function getOrCreateEmitter(sessionId: string): EventEmitter {
   }
   return sessionEmitters.get(sessionId)!
 }
+
+// POST /api/intent - classify input before session creation (called from Home page)
+router.post('/api/intent', async (req, res) => {
+  const { input } = req.body as { input: string }
+  if (!input?.trim()) {
+    res.status(400).json({ error: 'input is required' })
+    return
+  }
+  try {
+    const result = await classifyInput(input.trim())
+    res.json(result)
+  } catch {
+    // Fail open — never block a user from researching
+    res.json({ classification: 'research', reply: '' })
+  }
+})
 
 // POST /api/sessions - create new session
 router.post('/api/sessions', async (req, res) => {
@@ -119,13 +135,35 @@ router.post('/api/sessions/:id/start', async (req, res) => {
     ollamaUrl: env.OLLAMA_BASE_URL,
     semanticScholarKey: env.SEMANTIC_SCHOLAR_API_KEY,
     sendEvent
-  }).then(async () => {
+  }).then(async ({ summary, clarifyingQuestions, papersCount, reportMarkdown, graphData }) => {
     await updateSessionStatus(id, 'completed')
-    sendEvent('done', { status: 'completed' })
+
+    // Build and save welcome message first
+    const welcomeMsgId = uuidv4()
+    const questionsText = clarifyingQuestions.length > 0
+      ? `\n\nTo help focus our exploration, I have a few questions:\n${clarifyingQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`
+      : ''
+    const welcomeContent = `I've finished analyzing the research. Here's a summary:\n\n**${summary}**${questionsText}\n\nFeel free to ask me anything about the papers, request a full report, or explore a specific angle.`
+
+    await saveMessage({
+      id: welcomeMsgId,
+      sessionId: id,
+      role: 'assistant',
+      content: welcomeContent,
+      createdAt: new Date().toISOString()
+    })
+
+    // Stream welcome message token-by-token would be ideal but a single token works fine
+    sendEvent('token', { text: welcomeContent, phase: 'welcome', msgId: welcomeMsgId })
+    sendEvent('message_done', { msgId: welcomeMsgId })
+
+    // Send 'done' LAST — after welcome message so frontend doesn't miss it
+    sendEvent('done', { papersCount, reportMarkdown, graphData })
   }).catch(async err => {
     console.error('Workflow error:', err)
     await updateSessionStatus(id, 'error')
     sendEvent('error', { message: err instanceof Error ? err.message : 'Unknown error' })
+    sendEvent('done', { papersCount: 0, reportMarkdown: '', graphData: { nodes: [], edges: [] } })
   })
 
   res.json({ started: true })
@@ -160,7 +198,7 @@ router.post('/api/sessions/:id/message', async (req, res) => {
   const papers = await getPapersForSession(id)
   const hasActivePapers = papers.length > 0
 
-  let intent: 'research' | 'doubt' | 'report' = 'doubt'
+  let intent: 'research' | 'doubt' | 'report' | 'chat' = 'doubt'
   try {
     intent = await detectIntent(message, hasActivePapers)
   } catch {
@@ -178,11 +216,34 @@ router.post('/api/sessions/:id/message', async (req, res) => {
   const assistantMsgId = uuidv4()
   let assistantContent = ''
 
-  if (intent === 'doubt') {
+  if (intent === 'chat') {
+    runChat({
+      message,
+      conversationHistory,
+      hasPapers: hasActivePapers,
+      onToken: (t) => {
+        assistantContent += t
+        sendEvent('token', { text: t, phase: 'tutor', msgId: assistantMsgId })
+      }
+    }).then(async () => {
+      await saveMessage({
+        id: assistantMsgId,
+        sessionId: id,
+        role: 'assistant',
+        content: assistantContent,
+        createdAt: new Date().toISOString()
+      })
+      sendEvent('message_done', { msgId: assistantMsgId })
+    }).catch(err => {
+      console.error('Chat error:', err)
+      sendEvent('error', { message: 'Failed to respond' })
+    })
+  } else if (intent === 'doubt') {
     runTutor({
       sessionId: id,
       question: message,
       conversationHistory,
+      papers: papers.map(p => ({ id: p.id, title: p.title, authors: p.authors, year: p.year })),
       ollamaUrl: env.OLLAMA_BASE_URL,
       onToken: (t) => {
         assistantContent += t
@@ -252,7 +313,16 @@ router.post('/api/sessions/:id/message', async (req, res) => {
       ollamaUrl: env.OLLAMA_BASE_URL,
       semanticScholarKey: env.SEMANTIC_SCHOLAR_API_KEY,
       sendEvent
-    }).then(() => {
+    }).then(async (result) => {
+      const content = result.reportMarkdown ||
+        `Research complete. Found ${result.papersCount} papers.\n\n${result.summary}`
+      await saveMessage({
+        id: assistantMsgId,
+        sessionId: id,
+        role: 'assistant',
+        content,
+        createdAt: new Date().toISOString()
+      })
       sendEvent('message_done', { msgId: assistantMsgId })
     }).catch(err => {
       console.error('Research workflow error:', err)

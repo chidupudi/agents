@@ -1,6 +1,6 @@
 import { runPlanner } from '../agents/planner.js'
 import { runRetriever } from '../agents/retriever.js'
-import { embedAndStorePaper } from '../agents/embedder.js'
+import { embedAndStorePaper, embedPdfContent } from '../agents/embedder.js'
 import { runReasoning } from '../agents/reasoning.js'
 import { runReport } from '../agents/report.js'
 import { savePaper, getPapersForSession } from '../db/sessions.js'
@@ -17,7 +17,7 @@ export async function runResearchWorkflow(params: {
   ollamaUrl: string
   semanticScholarKey: string
   sendEvent: (type: string, data: unknown) => void
-}): Promise<void> {
+}): Promise<{ summary: string; clarifyingQuestions: string[]; papersCount: number; reportMarkdown: string; graphData: { nodes: GraphNode[]; edges: GraphEdge[] } }> {
   const { sessionId, input, pdfText, maxDepth, apiKey, ollamaUrl, semanticScholarKey, sendEvent } = params
   const allPapers: Paper[] = []
   const graphEdges: GraphEdge[] = []
@@ -29,7 +29,7 @@ export async function runResearchWorkflow(params: {
   // Step 1: Plan
   sendStep({ type: 'plan', status: 'running', message: 'Planning research strategy...' })
 
-  let plan: { goalConcepts: string[]; searchQueries: string[]; priorityOrder: string[]; summary: string }
+  let plan: { goalConcepts: string[]; searchQueries: string[]; priorityOrder: string[]; summary: string; clarifyingQuestions: string[] }
   try {
     // For PDFs: give the planner the actual paper content, not just the filename
     const planInput = pdfText
@@ -42,8 +42,37 @@ export async function runResearchWorkflow(params: {
       goalConcepts: [input],
       searchQueries: [input],
       priorityOrder: [input],
-      summary: `Research into: ${input}`
+      summary: `Research into: ${input}`,
+      clarifyingQuestions: []
     }
+  }
+
+  // If a PDF was uploaded, embed its full text so it's searchable in Q&A
+  if (pdfText && pdfText.trim().length > 100) {
+    sendStep({ type: 'embed', status: 'running', message: 'Indexing uploaded PDF content...' })
+    const pdfPaperId = uuidv4()
+    const pdfPaper: Paper = {
+      id: pdfPaperId,
+      semanticScholarId: `pdf-upload-${sessionId}`,
+      title: input,
+      authors: ['Uploaded Document'],
+      year: new Date().getFullYear(),
+      abstract: pdfText.slice(0, 500),
+      citationCount: 0,
+      depth: 0,
+      relevanceScore: 1.0,
+      status: 'root',
+      sessionId
+    }
+    await savePaper(pdfPaper)
+    allPapers.push(pdfPaper)
+    sendEvent('paper_found', pdfPaper)
+    try {
+      await embedPdfContent({ text: pdfText, sessionId, paperId: pdfPaperId, ollamaUrl })
+    } catch (err) {
+      console.error('PDF embedding error:', err)
+    }
+    sendStep({ type: 'embed', status: 'done', message: 'PDF content indexed and ready for questions' })
   }
 
   sendStep({
@@ -69,7 +98,7 @@ export async function runResearchWorkflow(params: {
 
     let fetchedPapers: Paper[] = []
     try {
-      fetchedPapers = await runRetriever(currentQueries, semanticScholarKey, sessionId)
+      fetchedPapers = await runRetriever(currentQueries, semanticScholarKey, sessionId, sendEvent)
     } catch (err) {
       console.error('Retriever error:', err)
     }
@@ -220,9 +249,13 @@ export async function runResearchWorkflow(params: {
 
   sendStep({ type: 'report', status: 'done', message: 'Report generated successfully' })
 
-  sendEvent('done', {
+  // Return data to the route handler — it will send 'done' AFTER the welcome message
+  // so the SSE stream receives: token(welcome) → message_done → done (in correct order)
+  return {
+    summary: plan.summary,
+    clarifyingQuestions: plan.clarifyingQuestions,
     papersCount: allPapers.length,
     reportMarkdown,
     graphData
-  })
+  }
 }

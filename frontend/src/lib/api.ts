@@ -84,6 +84,23 @@ export function getStreamUrl(sessionId: string): string {
   return `/api/sessions/${sessionId}/stream`
 }
 
+export async function classifyInput(input: string): Promise<{
+  classification: 'research' | 'conversation' | 'unclear'
+  reply: string
+}> {
+  try {
+    const response = await fetch(apiUrl('/intent'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input })
+    })
+    if (!response.ok) return { classification: 'research', reply: '' }
+    return response.json()
+  } catch {
+    return { classification: 'research', reply: '' }
+  }
+}
+
 export async function getModels(): Promise<Record<string, unknown>> {
   const response = await fetch(apiUrl('/models'))
   if (!response.ok) return {}

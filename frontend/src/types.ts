@@ -40,7 +40,7 @@ export interface AgentStep {
 }
 
 export interface SSEEvent {
-  type: 'agent_step' | 'token' | 'paper_found' | 'graph_update' | 'done' | 'error' | 'message_done' | 'section_ref'
+  type: 'agent_step' | 'token' | 'paper_found' | 'graph_update' | 'done' | 'error' | 'message_done' | 'section_ref' | 'rate_limit'
   data: unknown
 }
 
